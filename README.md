@@ -24,6 +24,9 @@
 
 ---
 
+
+![image](https://github.com/user-attachments/assets/51784ffb-8c89-4a9b-a5ae-b0f592737d03)
+
 ## 🚀 Features
 
 - Extracts blocked IP ranges from pfBlockerNG configuration or logs.
