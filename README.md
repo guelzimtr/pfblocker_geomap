@@ -26,6 +26,8 @@
 
 
 ![image](https://github.com/user-attachments/assets/51784ffb-8c89-4a9b-a5ae-b0f592737d03)
+Red: Blocked
+Blue: Passed
 
 ## 🚀 Features
 
