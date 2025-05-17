@@ -83,7 +83,7 @@ To enable IP geolocation, you must download the GeoLite2 database from MaxMind.
 Run the script from your terminal:
 
 ```bash
-python pfblocker_geomap.py
+source start_server.sh
 ```
 
 The script will:
