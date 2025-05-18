@@ -12,16 +12,20 @@ GEO_DB_PATH = "./maxmind/GeoLite2-City_20250509/GeoLite2-City.mmdb"
 
 # Define data model
 class IPAddressInput(BaseModel):
-    ip: IPvAnyAddress
+    src: str
+    dst: str
 
 # === Input Model ===
 class URLInput(BaseModel):
-    url: HttpUrl
+    url: str
+
+class StrModel(BaseModel):
+    src : str
+    dst : str
 
 # === App and State ===
 app = FastAPI()
 ip_data = []  # List of {"ip": ..., "hostname": ...}
-#fmap = folium.Map(location=[0, 0], zoom_start=3)
 # === Load GeoIP2 database ===
 try:
     reader = geoip2.database.Reader(GEO_DB_PATH)
@@ -32,31 +36,32 @@ except FileNotFoundError:
 def update_map(col="blue"):
     fmap = folium.Map(location=[0, 0], zoom_start=3)
     for entry in ip_data:
-        ip = entry["ip"]
-        hostname = entry["hostname"]
+        src = entry["src"]
+        dst = entry["dst"]
         try:
-            geo = reader.city(ip)
+            geo = reader.city(dst)
             lat, lon = geo.location.latitude, geo.location.longitude
             if lat and lon:
                 folium.Marker(
                     location=[lat, lon],
-                    popup=f"{hostname} ({ip})",
+                    popup=f"{src} => ({dst})",
                     icon=folium.Icon(color=entry["marker_color"], icon="globe")
                 ).add_to(fmap)
             else:
-                print(f"IP not found in Geo List: {ip}")
+                print(f"IP not found in Geo List: {dst}")
         except Exception:
             continue
     fmap.save(MAP_PATH)
 
 
 @app.post("/add_ip/")
-def add_ip(ip_input: IPAddressInput):
-    ip = str(ip_input.ip)
+def add_ip(data: StrModel):
+    src = data.src
+    dst = data.dst
 
     # Add IP to memory
-    if not any(entry["ip"] == ip for entry in ip_data):
-        ip_data.append({"ip": ip, "hostname": "", "marker_color": "red"})
+    if not any(entry["src"] == src and entry["dst"] == dst for entry in ip_data):
+        ip_data.append({"src": src, "dst": dst, "marker_color": "red"})
         update_map()
 
     return {"message": "IP added"}
@@ -64,18 +69,18 @@ def add_ip(ip_input: IPAddressInput):
 
 # === API: Add URL and update map ===
 @app.post("/add_url/")
-def add_url(data: URLInput):
+def add_url(data: StrModel):
     try:
-        hostname = data.url.host
-        ip = socket.gethostbyname(hostname)
+        src = data.src
+        dst = socket.gethostbyname(data.dst)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"DNS resolution failed: {e}")
 
-    if not any(entry["ip"] == ip for entry in ip_data):
-        ip_data.append({"ip": ip, "hostname": hostname, "marker_color":"blue"})
+    if not any(entry["src"] == src and entry["dst"] == dst for entry in ip_data):
+        ip_data.append({"src": src, "dst": dst, "marker_color":"blue"})
         update_map()
 
-    return {"message": "IP resolved and added", "ip": ip, "hostname": hostname}
+    return {f"message": "IP resolved and added", "src": src, "dst": dst}
 
 # === API: Serve iframe map page with auto-refresh ===
 @app.get("/map", response_class=HTMLResponse)
