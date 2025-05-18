@@ -24,6 +24,7 @@ tail -F "$LOG_FILE" | while IFS= read -r line; do
         logger -t "$LOG_TAG" "Sending src: $src, dst: $dst"
         curl -s -X POST "$API_URL" -H "$CONTENT_TYPE" \
              -d "{\"src\": \"$src\", \"dst\": \"$dst\"}"
+    	echo -e "--"
     fi
 done
 

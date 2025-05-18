@@ -8,7 +8,10 @@ import geoip2.database
 
 # === Configuration ===
 MAP_PATH = "ip_map.html"
-GEO_DB_PATH = "./maxmind/GeoLite2-City_20250509/GeoLite2-City.mmdb"
+GEO_DB_PATH_BASE = "./maxmind/"
+GEO_DB_VERSION = "20250509"
+GEO_DB_PATH = GEO_DB_PATH_BASE + "GeoLite2-City_" + GEO_DB_VERSION + "/GeoLite2-City.mmdb"
+#GEO_DB_PATH = GEO_DB_PATH_BASE + "GeoLite2-City_20250509/GeoLite2-City.mmdb"
 
 # Define data model
 class IPAddressInput(BaseModel):
@@ -23,6 +26,9 @@ class StrModel(BaseModel):
     src : str
     dst : str
 
+class CmdModel(BaseModel):
+    cmd : str
+
 # === App and State ===
 app = FastAPI()
 ip_data = []  # List of {"ip": ..., "hostname": ...}
@@ -31,6 +37,20 @@ try:
     reader = geoip2.database.Reader(GEO_DB_PATH)
 except FileNotFoundError:
     raise RuntimeError(f"GeoLite2 database not found at: {GEO_DB_PATH}")
+
+@app.get("/reload_geodb/{db_version}")
+def reload_geodb(db_version: str):
+
+    if db_version is not None:
+        GEO_DB_VERSION = db_version
+        GEO_DB_PATH = GEO_DB_PATH_BASE + "GeoLite2-City_" + GEO_DB_VERSION + "/GeoLite2-City.mmdb"
+        try:
+           print(f"Reloaded Geo DB: {GEO_DB_PATH}")
+           reader = geoip2.database.Reader(GEO_DB_PATH)
+        except Exception as e:
+           raise HTTPException(status_code=400, detail=f"GeoLite2 database not found at: {GEO_DB_PATH} {e}")
+
+    return GEO_DB_PATH
 
 # === Function to update map file ===
 def update_map(col="blue"):
@@ -74,7 +94,7 @@ def add_url(data: StrModel):
         src = data.src
         dst = socket.gethostbyname(data.dst)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"DNS resolution failed: {e}")
+        raise HTTPException(status_code=400, detail=f"DNS resolution failed: {e} {data.dst}")
 
     if not any(entry["src"] == src and entry["dst"] == dst for entry in ip_data):
         ip_data.append({"src": src, "dst": dst, "marker_color":"blue"})
